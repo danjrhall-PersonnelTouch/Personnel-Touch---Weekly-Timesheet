@@ -139,14 +139,17 @@ async function handleDownloadLink(id){
     const res=await fetch(`${API}?id=${encodeURIComponent(id)}`);
     if(!res.ok)throw new Error('not found');
     const rec=await res.json();
-    if(!rec.pdf){throw new Error('not ready');}
+    if(!rec.signed){throw new Error('not ready');}
+    // Load the record into state, then regenerate the same PDF in-browser
+    ST.d=rec.d;ST.entries=rec.entries;ST.empSig=rec.empSig;ST.sup=rec.sup;ST.supSig=rec.supSig;
+    const pdfDataUri=buildPDF();
     const a=document.createElement('a');
-    a.href=rec.pdf;
+    a.href=pdfDataUri;
     a.download=`PT-Timesheet-${(rec.d.name||'employee').replace(/\s+/g,'-')}-${rec.d.weekOf}.pdf`;
     document.body.appendChild(a);a.click();a.remove();
-    ST.loading=false;ST.downloadDone=true;ST.d=rec.d;render();
+    ST.loading=false;ST.downloadDone=true;render();
   }catch(e){
-    ST.loading=false;ST.loadError='This download link has expired or the PDF could not be found.';render();
+    ST.loading=false;ST.loadError='This download link has expired or the timesheet could not be found.';render();
   }
 }
 
@@ -327,8 +330,7 @@ async function subSup(){
   const btn=document.getElementById('subBtn');
   btn.disabled=true;btn.innerHTML='<span class="spin"></span>Submitting…';errEl.innerHTML='';
   try{
-    const pdfDataUri=buildPDF();
-    const payload={id:ST.recordId,d:ST.d,entries:ST.entries,supEmail:ST.supEmail,empSig:ST.empSig,sup:ST.sup,supSig:ST.supSig,pdf:pdfDataUri};
+    const payload={id:ST.recordId,d:ST.d,entries:ST.entries,supEmail:ST.supEmail,empSig:ST.empSig,sup:ST.sup,supSig:ST.supSig,signed:true};
     const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     if(!res.ok)throw new Error('save failed');
     const {id}=await res.json();
