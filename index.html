@@ -306,7 +306,7 @@ async function sendToSupervisor(){
     ST.recordId=id;
     const link=`${location.origin}${location.pathname}?id=${id}`;
     const subj=encodeURIComponent(`Action required: Please sign timesheet for ${ST.d.name} — w/c ${ST.d.weekOf}`);
-    const body=encodeURIComponent(`Hi,\n\n${ST.d.name} (${ST.d.position}) has submitted their timesheet for w/c ${ST.d.weekOf} (${wT()}h) and needs your countersignature.\n\nClient: ${ST.d.client}${ST.d.site?'\nSite: '+ST.d.site:''}\n\nPlease click the link below to review and sign:\n${link}\n\nOnce signed, this will be forwarded automatically to ${ST.d.branch} payroll.\n\nThank you,\nPersonnel Touch`);
+    const body=encodeURIComponent(`Hi,\n\n${ST.d.name} (${ST.d.position}) has submitted their timesheet for w/c ${ST.d.weekOf} (${wT()}h) and needs your countersignature.\n\nClient: ${ST.d.client}${ST.d.site?'\nSite: '+ST.d.site:''}\n\nPlease click the link below to review and sign:\n<${link}>\n\nOnce signed, this will be forwarded automatically to ${ST.d.branch} payroll.\n\nThank you,\nPersonnel Touch`);
     window.location.href=`mailto:${ST.supEmail}?subject=${subj}&body=${body}`;
     ST.step=3;render();window.scrollTo(0,0);
   }catch(e){
@@ -336,7 +336,7 @@ async function subSup(){
     const link=`${location.origin}${location.pathname}?download=${id}`;
     const branch=gB();
     const subj=encodeURIComponent(`Signed Timesheet — ${ST.d.name} — w/c ${ST.d.weekOf}`);
-    const body=encodeURIComponent(`Hi ${ST.d.branch} team,\n\nThe timesheet below has been signed by both the employee and supervisor.\n\nEmployee: ${ST.d.name} (${ST.d.position})\nClient: ${ST.d.client}${ST.d.site?'\nSite: '+ST.d.site:''}\nWeek of: ${ST.d.weekOf}\nTotal hours: ${wT()}h\n\nSupervisor: ${s.name}, ${s.position}, ${s.company}\n\nDownload the signed PDF here:\n${link}\n\nRegards,\n${s.name}`);
+    const body=encodeURIComponent(`Hi ${ST.d.branch} team,\n\nThe timesheet below has been signed by both the employee and supervisor.\n\nEmployee: ${ST.d.name} (${ST.d.position})\nClient: ${ST.d.client}${ST.d.site?'\nSite: '+ST.d.site:''}\nWeek of: ${ST.d.weekOf}\nTotal hours: ${wT()}h\n\nSupervisor: ${s.name}, ${s.position}, ${s.company}\n\nDownload the signed PDF here:\n<${link}>\n\nRegards,\n${s.name}`);
     window.location.href=`mailto:${branch.payroll}?subject=${subj}&body=${body}`;
     ST.step=5;render();window.scrollTo(0,0);
   }catch(e){
