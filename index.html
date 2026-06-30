@@ -245,12 +245,10 @@ ${navSend()}`;}
 function navSend(){
   return`<div class="nr"><button class="btn bb" onclick="prev()">← Back</button> <button class="btn bn" id="sendBtn" onclick="sendToSupervisor()">Send for sign-off →</button></div>`;
 }
-function p3(){const d=ST.d;const branch=gB();const link=`${location.origin}${location.pathname}?id=${ST.recordId}`;
+function p3(){const d=ST.d;const branch=gB();
   return`<div style="text-align:center"><div class="hi">📧</div><div class="ht">Sent to supervisor</div>
 <p class="hs">Your signed timesheet has been emailed to <strong>${esc(ST.supEmail)}</strong> with a link to review and countersign.</p></div>
 <div class="ib"><b>What happens next:</b><br>Your supervisor opens the link on their own device, reviews your hours, adds their name/company, and countersigns. Once done, the fully signed timesheet PDF is generated and sent to <b>${esc(branch.label)}</b> payroll.</div>
-<div class="ib dm"><b>Link not showing as clickable in their email?</b><br>You can also copy it and send it directly via text message or WhatsApp instead.</div>
-<button class="ab or" onclick="copyLink('${link}', this)">📋 Copy sign-off link</button>
 <button class="btn bn or" style="width:100%;background:transparent;color:#BF2C2C;border:1.5px solid #BF2C2C" onclick="reset()">Start a new timesheet</button>`;}
 function p4(){const d=ST.d;const tot=wT();const worked=ST.entries.filter(e=>cH(e.start,e.finish,e.brk));const s=ST.sup;
   return`<div class="sb"><b>Supervisor — your sign-off is required</b><span>Employee: ${esc(d.name)} · ${tot}h · w/c ${fD(d.weekOf)}</span></div>
@@ -278,20 +276,10 @@ function p5(){const d=ST.d;const s=ST.sup;const branch=gB();const tot=wT();
 <p class="ds">Signed by <strong>${esc(d.name)}</strong> and countersigned by <strong>${esc(s.name)}</strong> (${esc(s.company)}).<br><strong>${tot}h</strong> — sent to ${esc(branch.short)} payroll.</p>
 <div class="ib"><b>Done!</b> ${esc(branch.label)} payroll has been emailed a link to download the fully signed PDF. You can also download a copy below for your own records.</div>
 <button class="ab grn" onclick="dlPDFNow()">⬇ Download a copy of the signed PDF</button>
-<button class="ab or" onclick="copyLink('${location.origin}${location.pathname}?download=${ST.recordId}', this)">📋 Copy payroll download link</button>
 <button class="ab or" onclick="reset()">Start new timesheet</button>`;}
 
 function nav(back,next,dis){
   return`<div class="nr">${back?`<button class="btn bb" onclick="prev()">← Back</button>`:''} ${next?`<button class="btn bn" ${dis?'disabled':''} onclick="nxt()">Continue →</button>`:''}</div>`;}
-function copyLink(link,btn){
-  navigator.clipboard.writeText(link).then(()=>{
-    const orig=btn.textContent;
-    btn.textContent='✅ Copied! Paste it into a text or WhatsApp message';
-    setTimeout(()=>{btn.textContent=orig;},2500);
-  }).catch(()=>{
-    prompt('Copy this link manually:',link);
-  });
-}
 function nxt(){
   if(ST.step===0){
     ST.d.name=document.getElementById('fn').value;ST.d.position=document.getElementById('fjt').value;
