@@ -1,9 +1,11 @@
 // Netlify Function: save and retrieve timesheet data
-// Uses Netlify Blobs — built-in storage, no extra signup, free on all plans.
-const { getStore } = require('@netlify/blobs');
+// Uses jsonblob.com — a free, anonymous JSON storage API. No signup, no API
+// keys, no dependency packages required. This avoids the Netlify Blobs
+// "MissingBlobsEnvironmentError" issue that some Netlify accounts run into.
+
+const BASE = 'https://jsonblob.com/api/jsonBlob';
 
 exports.handler = async (event) => {
-  const store = getStore('timesheets');
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -16,17 +18,30 @@ exports.handler = async (event) => {
 
   try {
     if (event.httpMethod === 'POST') {
-      // Save a timesheet. If an id is included, update that existing record
-      // (used when the supervisor finishes and adds the PDF). Otherwise
-      // create a brand new record and return a fresh short id.
       const data = JSON.parse(event.body);
-      const id = data.id || Math.random().toString(36).substring(2, 10);
-      await store.setJSON(id, data);
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ id })
-      };
+
+      if (data.id) {
+        // Update an existing record
+        const putRes = await fetch(`${BASE}/${data.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!putRes.ok) throw new Error('Update failed');
+        return { statusCode: 200, headers, body: JSON.stringify({ id: data.id }) };
+      }
+
+      // Create a new record
+      const postRes = await fetch(BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!postRes.ok) throw new Error('Create failed');
+      const location = postRes.headers.get('location') || '';
+      const id = location.split('/').pop();
+      if (!id) throw new Error('No id returned');
+      return { statusCode: 200, headers, body: JSON.stringify({ id }) };
     }
 
     if (event.httpMethod === 'GET') {
@@ -34,10 +49,11 @@ exports.handler = async (event) => {
       if (!id) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing id' }) };
       }
-      const data = await store.get(id, { type: 'json' });
-      if (!data) {
+      const getRes = await fetch(`${BASE}/${id}`);
+      if (!getRes.ok) {
         return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
       }
+      const data = await getRes.json();
       return { statusCode: 200, headers, body: JSON.stringify(data) };
     }
 
