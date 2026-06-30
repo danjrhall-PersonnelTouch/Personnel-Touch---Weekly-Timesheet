@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Personnel Touch - Weekly Timesheet</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1a1a1a;background:#f4f4f2;min-height:100vh}
+#app{max-width:480px;margin:0 auto;padding-bottom:2rem;background:#fff;min-height:100vh;box-shadow:0 0 24px rgba(0,0,0,0.06)}
+.pt-hdr{background:#fff;border-bottom:3px solid #BF2C2C;padding:14px 18px;display:flex;align-items:center;gap:14px}
+.pt-hdr img{height:42px;width:auto;display:block}
+.pt-branch{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px}
+.pt-mode{font-size:15px;font-weight:600;color:#222}
+.pt-mode.sup{color:#0F6E56}
+.prog-wrap{padding:1rem 1.1rem 0;display:flex;gap:4px}
+.ps{flex:1;height:4px;border-radius:2px;background:#e5e5e3}
+.ps.ed{background:#BF2C2C;opacity:.4}.ps.ea{background:#BF2C2C}.ps.sd{background:#7EC8A4}.ps.sa{background:#0F6E56}.ps.hv{background:#F5A623}
+.step-lbl{padding:.4rem 1.1rem .9rem;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+.cnt{padding:0 1.1rem 1.5rem}
+h2{font-size:21px;font-weight:600;margin-bottom:.3rem}
+.sub{font-size:14px;color:#666;margin-bottom:1.4rem;line-height:1.55}
+.fd{margin-bottom:14px}
+.fl{display:block;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
+.fd input,.fd select,.fd textarea{width:100%;padding:11px 13px;border:1px solid #ddd;border-radius:8px;font-size:16px;background:#fff;color:#111;-webkit-appearance:none;appearance:none;font-family:inherit}
+.fd input:focus,.fd select:focus,.fd textarea:focus{outline:none;border-color:#BF2C2C;box-shadow:0 0 0 3px rgba(191,44,44,.1)}
+.fd textarea{resize:vertical;min-height:60px;line-height:1.5}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hr{height:1px;background:#eee;margin:1.3rem 0}
+.dc{background:#fff;border:1px solid #ddd;border-radius:12px;padding:14px;margin-bottom:10px}
+.dh{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;-webkit-user-select:none}
+.dn{font-weight:600;font-size:16px}.dd{font-size:12px;color:#888;margin-top:2px}
+.pill{font-size:12px;font-weight:600;color:#BF2C2C;background:#FDEAEA;padding:4px 12px;border-radius:20px;flex-shrink:0}
+.pill.off{background:#f2f2f2;color:#aaa}
+.db{display:none;padding-top:13px;border-top:1px solid #eee;margin-top:12px}
+.db.open{display:block}
+.cert{background:#f5f6f9;border-left:3px solid #BF2C2C;border-radius:0 8px 8px 0;padding:13px 14px;margin-bottom:1.1rem;font-size:12.5px;line-height:1.7;color:#555}
+.cert.sc{border-left-color:#0F6E56}
+.cert strong{color:#222;display:block;margin-bottom:5px}
+.sw{background:#f8f8f8;border:1px solid #ddd;border-radius:12px;overflow:hidden;margin-bottom:8px}
+canvas{display:block;width:100%;height:150px;touch-action:none;cursor:crosshair}
+.sh{font-size:12px;color:#bbb;text-align:center;padding:7px;border-top:1px solid #eee}
+.clr{width:100%;padding:9px;background:transparent;border:1px solid #ddd;border-radius:8px;font-size:13px;color:#888;cursor:pointer;margin-bottom:1.2rem;font-family:inherit}
+.clr:hover{border-color:#C0392B;color:#C0392B}
+.rvc{background:#fff;border:1px solid #ddd;border-radius:12px;padding:14px;margin-bottom:11px}
+.rvc h3{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:9px}
+.rv{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:14px;gap:10px}
+.rv:last-child{border-bottom:none}
+.rl{color:#777;flex-shrink:0}.rr{font-weight:600;text-align:right;font-size:13.5px}
+.ts{border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:1.3rem}
+.ts.emp{background:#FDEAEA;border:1px solid #F0AAAA}.ts.sup{background:#E8F5EE;border:1px solid #7EC8A4}
+.tl{font-size:13px;font-weight:600}.tl.emp{color:#BF2C2C}.tl.sup{color:#0F6E56}
+.tn{font-size:26px;font-weight:700}.tn.emp{color:#BF2C2C}.tn.sup{color:#0F6E56}
+.nr{display:flex;gap:10px;margin-top:1.3rem}
+.btn{padding:14px;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;border:none;font-family:inherit}
+.bb{background:#f2f2f2;color:#111;border:1px solid #ddd;min-width:80px}
+.bn{background:#BF2C2C;color:#fff;flex:1}.bn.grn{background:#0F6E56}.bn:disabled{opacity:.3;cursor:default}
+.hi{width:72px;height:72px;border-radius:50%;background:#FFF3CD;display:flex;align-items:center;justify-content:center;margin:1.8rem auto 1.2rem;font-size:30px}
+.ht{font-size:22px;font-weight:600;text-align:center;margin-bottom:.6rem}
+.hs{font-size:14.5px;color:#666;text-align:center;line-height:1.6;margin-bottom:1.4rem;padding:0 6px}
+.ib{border:1px solid #ddd;border-radius:10px;padding:13px 15px;font-size:13.5px;color:#666;line-height:1.6;margin-bottom:1.1rem;background:#f8f8f8}
+.ib b{color:#333}.ib.dm{background:#EBF0FA;border-color:#8BA4C8}
+.sb{background:#0F6E56;color:#fff;border-radius:10px;padding:12px 16px;margin-bottom:1.2rem}
+.sb b{display:block;font-size:16px;margin-bottom:3px}.sb span{font-size:13px;opacity:.85}
+.roc{background:#f7f8fb;border:1px solid #ddd;border-radius:12px;padding:14px;margin-bottom:11px}
+.roc h3{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:9px}
+.di{width:70px;height:70px;border-radius:50%;background:#E8F5EE;display:flex;align-items:center;justify-content:center;margin:1.8rem auto 1.2rem;font-size:30px}
+.dt{font-size:23px;font-weight:600;text-align:center;margin-bottom:.5rem}
+.ds{font-size:14.5px;color:#666;text-align:center;margin-bottom:1.8rem;line-height:1.6;padding:0 6px}
+.ab{display:block;width:100%;padding:15px;border-radius:8px;font-size:16px;font-weight:600;text-align:center;text-decoration:none;margin-bottom:11px;cursor:pointer;border:none;font-family:inherit}
+.ab.red{background:#BF2C2C;color:#fff}.ab.grn{background:#0F6E56;color:#fff}.ab.or{background:transparent;color:#BF2C2C;border:1.5px solid #BF2C2C}
+.dn2{font-size:12.5px;color:#888;text-align:center;margin-top:16px;line-height:1.7;background:#f5f5f5;border-radius:8px;padding:11px 13px}
+.dn2 b{color:#C0392B}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.err{background:#FDEAEA;border:1px solid #F0AAAA;color:#8C1B1B;border-radius:8px;padding:11px 13px;font-size:13px;margin-bottom:1rem;line-height:1.5}
+.loadwrap{padding:3rem 1.5rem;text-align:center;color:#888;font-size:14px}
+@media (min-width:540px){#app{margin:2rem auto;border-radius:16px;overflow:hidden}.pt-hdr{border-radius:0}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const LOGO='data:image/jpeg;base64,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';
+const API='/api/timesheet';
+const BRANCHES=[
+  {label:'Personnel Touch Christchurch',short:'Christchurch',payroll:'ptsouth@personneltouch.co.nz'},
+  {label:'Personnel Touch Kapiti',short:'Kapiti',payroll:'timesheets.ptk@personneltouch.co.nz'},
+  {label:'Personnel Touch Wellington',short:'Wellington',payroll:'timesheets.ptw@personneltouch.co.nz'},
+  {label:'Personnel Touch Palmerston North',short:'Palmerston North',payroll:'timesheets.ptm@personneltouch.co.nz'},
+  {label:'Personnel Touch Hawkes Bay',short:'Hawkes Bay',payroll:'timesheets.ptm@personneltouch.co.nz'},
+];
+const DAYS=['Mon','Tues','Wed','Thurs','Fri','Sat','Sun'];
+const LBLS=['Employee Details','Daily Hours','Sign & Submit','Handover','Supervisor Sign-Off','Complete'];
+function fmt(d){return d.toISOString().split('T')[0]}
+function fD(s,o){if(!s)return'';return new Date(s+'T00:00:00').toLocaleDateString('en-NZ',o||{day:'numeric',month:'short'});}
+function getMon(){const d=new Date();const day=d.getDay();const diff=day===0?-6:1-day;d.setDate(d.getDate()+diff);return fmt(d);}
+function mkW(mon){return DAYS.map((n,i)=>{const d=new Date(mon+'T00:00:00');d.setDate(d.getDate()+i);return{date:fmt(d),day:n,start:'',finish:'',brk:'',notes:'',open:i===0};});}
+function cH(s,f,b){if(!s||!f)return'';const[sh,sm]=s.split(':').map(Number);const[fh,fm]=f.split(':').map(Number);const m=(fh*60+fm)-(sh*60+sm)-(+b||0);if(m<=0)return'0';return+(m/60).toFixed(2)+'';}
+function wT(){return+ST.entries.reduce((s,e)=>{const t=cH(e.start,e.finish,e.brk);return s+(t?+t:0);},0).toFixed(2);}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function gB(){return BRANCHES.find(b=>b.label===ST.d.branch)||BRANCHES[0];}
+const ST={step:0,recordId:null,d:{name:'',position:'',branch:BRANCHES[0].label,client:'',site:'',projectNo:'',weekOf:getMon()},entries:null,supEmail:'',empSig:null,empSigEmpty:true,sup:{name:'',position:'',company:''},supSig:null,supSigEmpty:true,loading:false,loadError:null};
+ST.entries=mkW(ST.d.weekOf);
+
+// ---- Boot: check URL for ?id= (supervisor link) or ?download= (payroll PDF link) ----
+async function boot(){
+  const params=new URLSearchParams(window.location.search);
+  const id=params.get('id');
+  const dl=params.get('download');
+  if(dl){
+    await handleDownloadLink(dl);
+    return;
+  }
+  if(id){
+    await loadForSupervisor(id);
+    return;
+  }
+  render();
+}
+async function loadForSupervisor(id){
+  ST.loading=true;render();
+  try{
+    const res=await fetch(`${API}?id=${encodeURIComponent(id)}`);
+    if(!res.ok)throw new Error('not found');
+    const rec=await res.json();
+    ST.recordId=id;
+    ST.d=rec.d;ST.entries=rec.entries;ST.supEmail=rec.supEmail;
+    ST.empSig=rec.empSig;ST.empSigEmpty=!rec.empSig;
+    ST.loading=false;ST.step=4;render();
+  }catch(e){
+    ST.loading=false;ST.loadError='This timesheet link has expired or could not be found. Please ask the employee to resend it.';render();
+  }
+}
+async function handleDownloadLink(id){
+  ST.loading=true;render();
+  try{
+    const res=await fetch(`${API}?id=${encodeURIComponent(id)}`);
+    if(!res.ok)throw new Error('not found');
+    const rec=await res.json();
+    if(!rec.pdf){throw new Error('not ready');}
+    const a=document.createElement('a');
+    a.href=rec.pdf;
+    a.download=`PT-Timesheet-${(rec.d.name||'employee').replace(/\s+/g,'-')}-${rec.d.weekOf}.pdf`;
+    document.body.appendChild(a);a.click();a.remove();
+    ST.loading=false;ST.downloadDone=true;ST.d=rec.d;render();
+  }catch(e){
+    ST.loading=false;ST.loadError='This download link has expired or the PDF could not be found.';render();
+  }
+}
+
+const cvsMap={};
+function gpos(e,c){const r=c.getBoundingClientRect(),sx=c.width/r.width,sy=c.height/r.height;if(e.touches)return{x:(e.touches[0].clientX-r.left)*sx,y:(e.touches[0].clientY-r.top)*sy};return{x:(e.clientX-r.left)*sx,y:(e.clientY-r.top)*sy};}
+function iCvs(id,sk,ek){
+  const cvs=document.getElementById(id);if(!cvs)return;
+  const ctx=cvs.getContext('2d');cvs.width=cvs.offsetWidth*2;cvs.height=cvs.offsetHeight*2;
+  ctx.scale(2,2);ctx.strokeStyle='#222';ctx.lineWidth=2;ctx.lineCap='round';ctx.lineJoin='round';
+  cvsMap[sk]={cvs,ctx};
+  if(ST[sk]){const img=new Image();img.onload=()=>ctx.drawImage(img,0,0,cvs.width/2,cvs.height/2);img.src=ST[sk];}
+  let dr=false,lx=0,ly=0;
+  const s=e=>{e.preventDefault();dr=true;const p=gpos(e,cvs);lx=p.x;ly=p.y;};
+  const m=e=>{e.preventDefault();if(!dr)return;const p=gpos(e,cvs);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.stroke();lx=p.x;ly=p.y;ST[ek]=false;ST[sk]=cvs.toDataURL();};
+  const en=()=>{dr=false;if(cvs)ST[sk]=cvs.toDataURL();};
+  cvs.addEventListener('mousedown',s);cvs.addEventListener('mousemove',m);cvs.addEventListener('mouseup',en);
+  cvs.addEventListener('touchstart',s,{passive:false});cvs.addEventListener('touchmove',m,{passive:false});cvs.addEventListener('touchend',en);
+}
+function clrC(sk,ek){const m=cvsMap[sk];if(m){m.ctx.clearRect(0,0,m.cvs.width,m.cvs.height);}ST[sk]=null;ST[ek]=true;}
+
+function render(){
+  const app=document.getElementById('app');
+  if(ST.loadError){
+    app.innerHTML=`<div class="pt-hdr"><img src="${LOGO}" alt="Personnel Touch"></div><div class="cnt"><div class="loadwrap"><div class="err">${esc(ST.loadError)}</div></div></div>`;return;
+  }
+  if(ST.loading){
+    app.innerHTML=`<div class="pt-hdr"><img src="${LOGO}" alt="Personnel Touch"></div><div class="cnt"><div class="loadwrap">Loading timesheet…</div></div>`;return;
+  }
+  if(ST.downloadDone){
+    app.innerHTML=`<div class="pt-hdr"><img src="${LOGO}" alt="Personnel Touch"></div><div class="cnt"><div class="loadwrap"><div class="di">✅</div><div class="dt" style="margin-top:0">Download started</div><p class="hs">The signed timesheet for <strong>${esc((ST.d&&ST.d.name)||'')}</strong> is downloading now. Check your downloads folder.</p></div></div>`;return;
+  }
+  const s=ST.step;
+  const isSup=s>=4;
+  function pc(i){if(i<s){if(i<=2)return'ps ed';if(i===3)return'ps hv';return'ps sd';}if(i===s){if(i<=2)return'ps ea';if(i===3)return'ps hv';return'ps sa';}return'ps';}
+  const segs=LBLS.map((_,i)=>`<div class="${pc(i)}"></div>`).join('');
+  const branch=ST.d.branch||BRANCHES[0].label;
+  let html=`<div class="pt-hdr"><img src="${LOGO}" alt="Personnel Touch"><div><div class="pt-branch">${esc(branch)}</div><div class="pt-mode ${isSup?'sup':''}">${isSup?'Supervisor Sign-Off':'Weekly Timesheet'}</div></div></div>
+<div class="prog-wrap">${segs}</div>
+<div class="step-lbl">Step ${s+1} of ${LBLS.length} — ${LBLS[s]}</div>
+<div class="cnt">`;
+  if(s===0)html+=p0();else if(s===1)html+=p1();else if(s===2)html+=p2();else if(s===3)html+=p3();else if(s===4)html+=p4();else html+=p5();
+  html+=`</div>`;app.innerHTML=html;
+  if(s===2)setTimeout(()=>iCvs('sc-emp','empSig','empSigEmpty'),60);
+  if(s===4)setTimeout(()=>iCvs('sc-sup','supSig','supSigEmpty'),60);
+  bind();
+}
+function p0(){const d=ST.d;
+  const bOpts=BRANCHES.map(b=>`<option ${d.branch===b.label?'selected':''}>${b.label}</option>`).join('');
+  return`<h2>Your details</h2><p class="sub">This info appears on the timesheet. Select your PT branch to route to the right payroll team.</p>
+<div class="fd"><label class="fl">Full name *</label><input id="fn" type="text" placeholder="e.g. John Smith" value="${esc(d.name)}"/></div>
+<div class="fd"><label class="fl">Position / job title *</label><input id="fjt" type="text" placeholder="e.g. Labourer, Electrician" value="${esc(d.position)}"/></div>
+<div class="hr"></div>
+<div class="fd"><label class="fl">Personnel Touch branch *</label><select id="fbr">${bOpts}</select></div>
+<div class="hr"></div>
+<div class="fd"><label class="fl">Client / company you are working for *</label><input id="fcl" type="text" placeholder="e.g. ABC Construction Ltd" value="${esc(d.client)}"/></div>
+<div class="fd"><label class="fl">Job location / site</label><input id="fsi" type="text" placeholder="e.g. 12 Example St, Christchurch" value="${esc(d.site)}"/></div>
+<div class="fd"><label class="fl">Project number</label><input id="fpn" type="text" placeholder="e.g. PRJ-001" value="${esc(d.projectNo)}"/></div>
+<div class="hr"></div>
+<div class="fd"><label class="fl">Week starting (Monday) *</label><input id="fwo" type="date" value="${d.weekOf}"/></div>
+${nav(false,true,!d.name||!d.position||!d.client)}`;}
+function p1(){
+  const cards=ST.entries.map((e,i)=>{const t=cH(e.start,e.finish,e.brk);
+    return`<div class="dc"><div class="dh" onclick="tog(${i})">
+<div><div class="dn">${e.day}</div><div class="dd">${fD(e.date,{weekday:'short',day:'numeric',month:'short'})}</div></div>
+<span class="pill ${!t?'off':''}">${t?t+'h':'tap to fill'}</span></div>
+<div class="db ${e.open?'open':''}">
+<div class="r2"><div class="fd"><label class="fl">Time start</label><input type="time" value="${e.start}" oninput="upd(${i},'start',this.value)"/></div>
+<div class="fd"><label class="fl">Time finish</label><input type="time" value="${e.finish}" oninput="upd(${i},'finish',this.value)"/></div></div>
+<div class="fd"><label class="fl">Less meal break (mins)</label><input type="number" value="${e.brk}" min="0" max="120" placeholder="e.g. 30" oninput="upd(${i},'brk',this.value)"/></div>
+<div class="fd"><label class="fl">Notes / leave requirements</label><textarea placeholder="e.g. Annual leave, Public holiday…" oninput="upd(${i},'notes',this.value)">${esc(e.notes)}</textarea></div>
+</div></div>`;}).join('');
+  return`<h2>Daily hours</h2><p class="sub">Tap each day to expand and fill in your hours. Leave blank for days not worked.</p>${cards}${nav(true,true,false)}`;}
+function p2(){const d=ST.d;const tot=wT();
+  const worked=ST.entries.filter(e=>cH(e.start,e.finish,e.brk));
+  const notes=ST.entries.filter(e=>e.notes);
+  return`<h2>Review &amp; sign</h2><p class="sub">Check your hours, sign to certify, then send to your supervisor.</p>
+<div class="rvc"><h3>Your details</h3>
+<div class="rv"><span class="rl">Name</span><span class="rr">${esc(d.name)}</span></div>
+<div class="rv"><span class="rl">Position</span><span class="rr">${esc(d.position)}</span></div>
+<div class="rv"><span class="rl">Client</span><span class="rr">${esc(d.client)}</span></div>
+${d.site?`<div class="rv"><span class="rl">Site</span><span class="rr">${esc(d.site)}</span></div>`:''}
+${d.projectNo?`<div class="rv"><span class="rl">Project no.</span><span class="rr">${esc(d.projectNo)}</span></div>`:''}
+<div class="rv"><span class="rl">PT Branch</span><span class="rr">${esc(d.branch)}</span></div>
+<div class="rv"><span class="rl">Week of</span><span class="rr">${fD(d.weekOf,{day:'numeric',month:'long',year:'numeric'})}</span></div></div>
+${worked.length?`<div class="rvc"><h3>Hours worked</h3>${worked.map(e=>`<div class="rv"><span class="rl">${e.day} ${fD(e.date)}</span><span class="rr">${e.start}–${e.finish}${e.brk?' ('+e.brk+'min)':''} = ${cH(e.start,e.finish,e.brk)}h</span></div>`).join('')}</div>`:''}
+${notes.length?`<div class="rvc"><h3>Leave / notes</h3>${notes.map(e=>`<div class="rv"><span class="rl">${e.day}</span><span class="rr">${esc(e.notes)}</span></div>`).join('')}</div>`:''}
+<div class="ts emp"><span class="tl emp">Total hours for week</span><span class="tn emp">${tot}h</span></div>
+<div class="cert"><strong>Employee's Certificate</strong>I hereby certify that this is a correct record of the hours worked by me and that no injuries were sustained. I undertake to treat as confidential all work performed by me on this assignment. I acknowledge my responsibilities with respect to Health and Safety whilst at work and my obligation to comply with Personnel Touch Ltd's Health and Safety Policy (a copy of which I have received) and health and safety procedures introduced by Personnel Touch Ltd.</div>
+<label class="fl" style="margin-bottom:8px">Your signature *</label>
+<div class="sw"><canvas id="sc-emp"></canvas><div class="sh">Sign with your finger</div></div>
+<button class="clr" onclick="clrC('empSig','empSigEmpty')">Clear and redo</button>
+<div class="hr"></div>
+<div class="fd"><label class="fl">Supervisor's email address *</label><input id="fse" type="email" placeholder="supervisor@clientcompany.co.nz" value="${esc(ST.supEmail)}"/><p style="font-size:12px;color:#888;margin-top:6px">A link to sign off your hours will be emailed here.</p></div>
+<div id="sendErr"></div>
+${navSend()}`;}
+function navSend(){
+  return`<div class="nr"><button class="btn bb" onclick="prev()">← Back</button> <button class="btn bn" id="sendBtn" onclick="sendToSupervisor()">Send for sign-off →</button></div>`;
+}
+function p3(){const d=ST.d;const branch=gB();
+  return`<div style="text-align:center"><div class="hi">📧</div><div class="ht">Sent to supervisor</div>
+<p class="hs">Your signed timesheet has been emailed to <strong>${esc(ST.supEmail)}</strong> with a link to review and countersign.</p></div>
+<div class="ib"><b>What happens next:</b><br>Your supervisor opens the link on their own device, reviews your hours, adds their name/company, and countersigns. Once done, the fully signed timesheet PDF is generated and sent to <b>${esc(branch.label)}</b> payroll.</div>
+<button class="btn bn or" style="width:100%;background:transparent;color:#BF2C2C;border:1.5px solid #BF2C2C" onclick="reset()">Start a new timesheet</button>`;}
+function p4(){const d=ST.d;const tot=wT();const worked=ST.entries.filter(e=>cH(e.start,e.finish,e.brk));const s=ST.sup;
+  return`<div class="sb"><b>Supervisor — your sign-off is required</b><span>Employee: ${esc(d.name)} · ${tot}h · w/c ${fD(d.weekOf)}</span></div>
+<p class="sub" style="margin-bottom:1rem">Review the hours below, fill in your details, and countersign.</p>
+<div class="roc"><h3>Employee timesheet (read only)</h3>
+<div class="rv"><span class="rl">Employee</span><span class="rr">${esc(d.name)} — ${esc(d.position)}</span></div>
+<div class="rv"><span class="rl">Client / Site</span><span class="rr">${esc(d.client)}${d.site?' / '+esc(d.site):''}</span></div>
+${d.projectNo?`<div class="rv"><span class="rl">Project no.</span><span class="rr">${esc(d.projectNo)}</span></div>`:''}
+<div class="rv"><span class="rl">Week of</span><span class="rr">${fD(d.weekOf,{day:'numeric',month:'short',year:'numeric'})}</span></div></div>
+${worked.length?`<div class="roc"><h3>Hours to approve</h3>${worked.map(e=>`<div class="rv"><span class="rl">${e.day} ${fD(e.date)}</span><span class="rr">${e.start}–${e.finish}${e.brk?' ('+e.brk+'min)':''} = ${cH(e.start,e.finish,e.brk)}h</span></div>`).join('')}<div class="rv" style="font-weight:600"><span class="rl">Total</span><span class="rr" style="color:#0F6E56">${tot}h</span></div></div>`:''}
+<div class="hr"></div>
+<h2>Your details</h2><p class="sub">As the site supervisor or client representative.</p>
+<div class="fd"><label class="fl">Your full name *</label><input id="sn" type="text" placeholder="Supervisor full name" value="${esc(s.name)}"/></div>
+<div class="fd"><label class="fl">Your position *</label><input id="sp" type="text" placeholder="e.g. Site Foreman, Project Manager" value="${esc(s.position)}"/></div>
+<div class="fd"><label class="fl">Company *</label><input id="sc2" type="text" placeholder="Your company name" value="${esc(s.company)}"/></div>
+<div class="hr"></div>
+<div class="cert sc"><strong>Client's Certificate</strong>It is hereby certified that the above hours are correct, the work was performed in a satisfactory manner and payment is authorised. We accept the terms and conditions which have been provided to us. We acknowledge that the Personnel Touch Ltd Employee has been given appropriate Health and Safety induction.</div>
+<label class="fl" style="margin-bottom:8px">Your signature *</label>
+<div class="sw"><canvas id="sc-sup"></canvas><div class="sh">Sign with your finger</div></div>
+<button class="clr" onclick="clrC('supSig','supSigEmpty')">Clear and redo</button>
+<div id="supErr"></div>
+<div class="nr"><button class="btn bn grn" id="subBtn" onclick="subSup()">Submit to payroll →</button></div>`;}
+function p5(){const d=ST.d;const s=ST.sup;const branch=gB();const tot=wT();
+  return`<div class="di">✅</div><div class="dt">Timesheet complete</div>
+<p class="ds">Signed by <strong>${esc(d.name)}</strong> and countersigned by <strong>${esc(s.name)}</strong> (${esc(s.company)}).<br><strong>${tot}h</strong> — sent to ${esc(branch.short)} payroll.</p>
+<div class="ib"><b>Done!</b> ${esc(branch.label)} payroll has been emailed a link to download the fully signed PDF. You can also download a copy below for your own records.</div>
+<button class="ab grn" onclick="dlPDFNow()">⬇ Download a copy of the signed PDF</button>
+<button class="ab or" onclick="reset()">Start new timesheet</button>`;}
+
+function nav(back,next,dis){
+  return`<div class="nr">${back?`<button class="btn bb" onclick="prev()">← Back</button>`:''} ${next?`<button class="btn bn" ${dis?'disabled':''} onclick="nxt()">Continue →</button>`:''}</div>`;}
+function nxt(){
+  if(ST.step===0){
+    ST.d.name=document.getElementById('fn').value;ST.d.position=document.getElementById('fjt').value;
+    ST.d.branch=document.getElementById('fbr').value;ST.d.client=document.getElementById('fcl').value;
+    ST.d.site=document.getElementById('fsi').value;ST.d.projectNo=document.getElementById('fpn').value;
+    const nw=document.getElementById('fwo').value;if(nw!==ST.d.weekOf){ST.d.weekOf=nw;ST.entries=mkW(nw);}
+  }
+  ST.step++;render();window.scrollTo(0,0);
+}
+
+// ---- Employee finishes: save to backend, get link, email supervisor ----
+async function sendToSupervisor(){
+  const se=document.getElementById('fse');ST.supEmail=se?se.value:'';
+  const errEl=document.getElementById('sendErr');
+  if(ST.empSigEmpty){errEl.innerHTML='<div class="err">Please sign your timesheet before continuing.</div>';return;}
+  if(!ST.supEmail){errEl.innerHTML='<div class="err">Please enter your supervisor\\'s email address.</div>';return;}
+  const btn=document.getElementById('sendBtn');
+  btn.disabled=true;btn.innerHTML='<span class="spin"></span>Sending…';errEl.innerHTML='';
+  try{
+    const payload={d:ST.d,entries:ST.entries,supEmail:ST.supEmail,empSig:ST.empSig};
+    const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!res.ok)throw new Error('save failed');
+    const {id}=await res.json();
+    ST.recordId=id;
+    const link=`${location.origin}${location.pathname}?id=${id}`;
+    const subj=encodeURIComponent(`Action required: Please sign timesheet for ${ST.d.name} — w/c ${ST.d.weekOf}`);
+    const body=encodeURIComponent(`Hi,\\n\\n${ST.d.name} (${ST.d.position}) has submitted their timesheet for w/c ${ST.d.weekOf} (${wT()}h) and needs your countersignature.\\n\\nClient: ${ST.d.client}${ST.d.site?'\\nSite: '+ST.d.site:''}\\n\\nPlease click the link below to review and sign:\\n${link}\\n\\nOnce signed, this will be forwarded automatically to ${ST.d.branch} payroll.\\n\\nThank you,\\nPersonnel Touch`);
+    window.location.href=`mailto:${ST.supEmail}?subject=${subj}&body=${body}`;
+    ST.step=3;render();window.scrollTo(0,0);
+  }catch(e){
+    btn.disabled=false;btn.innerHTML='Send for sign-off →';
+    errEl.innerHTML='<div class="err">Something went wrong saving your timesheet. Please check your connection and try again.</div>';
+  }
+}
+
+// ---- Supervisor finishes: generate PDF, save it, email payroll a download link ----
+async function subSup(){
+  const s=ST.sup;
+  s.name=document.getElementById('sn')?document.getElementById('sn').value:'';
+  s.position=document.getElementById('sp')?document.getElementById('sp').value:'';
+  s.company=document.getElementById('sc2')?document.getElementById('sc2').value:'';
+  const errEl=document.getElementById('supErr');
+  if(!s.name||!s.position||!s.company){errEl.innerHTML='<div class="err">Please fill in your name, position, and company.</div>';return;}
+  if(ST.supSigEmpty){errEl.innerHTML='<div class="err">Please sign before submitting.</div>';return;}
+  const btn=document.getElementById('subBtn');
+  btn.disabled=true;btn.innerHTML='<span class="spin"></span>Submitting…';errEl.innerHTML='';
+  try{
+    const pdfDataUri=buildPDF();
+    const payload={id:ST.recordId,d:ST.d,entries:ST.entries,supEmail:ST.supEmail,empSig:ST.empSig,sup:ST.sup,supSig:ST.supSig,pdf:pdfDataUri};
+    const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!res.ok)throw new Error('save failed');
+    const {id}=await res.json();
+    ST.recordId=id;
+    const link=`${location.origin}${location.pathname}?download=${id}`;
+    const branch=gB();
+    const subj=encodeURIComponent(`Signed Timesheet — ${ST.d.name} — w/c ${ST.d.weekOf}`);
+    const body=encodeURIComponent(`Hi ${ST.d.branch} team,\\n\\nThe timesheet below has been signed by both the employee and supervisor.\\n\\nEmployee: ${ST.d.name} (${ST.d.position})\\nClient: ${ST.d.client}${ST.d.site?'\\nSite: '+ST.d.site:''}\\nWeek of: ${ST.d.weekOf}\\nTotal hours: ${wT()}h\\n\\nSupervisor: ${s.name}, ${s.position}, ${s.company}\\n\\nDownload the signed PDF here:\\n${link}\\n\\nRegards,\\n${s.name}`);
+    window.location.href=`mailto:${branch.payroll}?subject=${subj}&body=${body}`;
+    ST.step=5;render();window.scrollTo(0,0);
+  }catch(e){
+    btn.disabled=false;btn.innerHTML='Submit to payroll →';
+    errEl.innerHTML='<div class="err">Something went wrong generating or saving the PDF. Please try again.</div>';
+  }
+}
+
+function prev(){ST.step--;render();window.scrollTo(0,0);}
+function tog(i){ST.entries[i].open=!ST.entries[i].open;render();}
+function upd(i,k,v){
+  ST.entries[i][k]=v;
+  const cards=document.querySelectorAll('.dc');
+  if(cards[i]){const e=ST.entries[i];const t=cH(e.start,e.finish,e.brk);const p=cards[i].querySelector('.pill');if(p){p.className=t?'pill':'pill off';p.textContent=t?t+'h':'tap to fill';}}
+}
+function reset(){
+  ST.step=0;ST.recordId=null;
+  ST.d={name:'',position:'',branch:BRANCHES[0].label,client:'',site:'',projectNo:'',weekOf:getMon()};
+  ST.entries=mkW(ST.d.weekOf);ST.supEmail='';ST.empSig=null;ST.empSigEmpty=true;
+  ST.sup={name:'',position:'',company:''};ST.supSig=null;ST.supSigEmpty=true;
+  Object.keys(cvsMap).forEach(k=>delete cvsMap[k]);
+  history.replaceState(null,'',location.pathname);
+  render();
+}
+function bind(){
+  if(ST.step===0){
+    const nb=document.querySelector('.bn');
+    ['fn','fjt','fcl'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',()=>{if(nb)nb.disabled=!document.getElementById('fn').value||!document.getElementById('fjt').value||!document.getElementById('fcl').value;});});
+  }
+}
+function dlPDFNow(){
+  const uri=buildPDF();
+  const a=document.createElement('a');a.href=uri;
+  a.download=`PT-Timesheet-${(ST.d.name||'employee').replace(/\s+/g,'-')}-${ST.d.weekOf}.pdf`;
+  document.body.appendChild(a);a.click();a.remove();
+}
+function buildPDF(){
+  const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});
+  const d=ST.d;const s=ST.sup;const tot=wT();const branch=gB();
+  try{doc.addImage(LOGO,'JPEG',10,8,48,14);}catch(e){doc.setFontSize(15);doc.setFont(undefined,'bold');doc.setTextColor(191,44,44);doc.text('PERSONNEL',10,15);doc.setTextColor(28,28,28);doc.text('TOUCH',10,23);}
+  doc.setFontSize(6.8);doc.setFont(undefined,'normal');doc.setTextColor(70,70,70);
+  ['PO Box 820, Paraparaumu, 5254','Freephone: 0800 285 183','Office Mobile: 027 782 3646','Office: 04 298 9719'].forEach((l,i)=>doc.text(l,10,27+i*4));
+  doc.setTextColor(191,44,44);doc.text('www.personneltouch.co.nz',10,43);
+  doc.setFont(undefined,'bold');doc.setFontSize(13);doc.setTextColor(28,28,28);
+  doc.text(branch.label.toUpperCase(),66,15);
+  doc.setFontSize(21);doc.text('WEEKLY TIMESHEET',66,26);
+  doc.setDrawColor(191,44,44);doc.setLineWidth(0.7);doc.line(10,52,200,52);
+  doc.setFont(undefined,'bold');doc.setFontSize(10);doc.setTextColor(0);
+  doc.text('Timesheets must be with our office by',105,59,{align:'center'});
+  doc.setFontSize(14);doc.text('Monday 12 noon',105,67,{align:'center'});
+  doc.setFont(undefined,'normal');doc.setFontSize(8.5);doc.setTextColor(191,44,44);
+  const em='Email: '+branch.payroll;doc.text(em,105,74,{align:'center'});
+  const ew=doc.getTextWidth(em);doc.setDrawColor(191,44,44);doc.setLineWidth(0.2);doc.line(105-ew/2,75,105+ew/2,75);
+  doc.setDrawColor(0);doc.setLineWidth(0.3);doc.setTextColor(0);
+  function fld(lb,val,x,y,xe){doc.setFont(undefined,'bold');doc.setFontSize(8);doc.text(lb,x,y);doc.setFont(undefined,'normal');doc.setFontSize(9.5);if(val)doc.text(val,x,y+6);doc.line(x,y+8,xe,y+8);}
+  fld('Name:',d.name,10,83,97);fld('Job Title:',d.position,10,96,97);
+  fld('Client:',d.client,105,83,200);fld('Site:',d.site,105,96,200);fld('Project Number:',d.projectNo,105,109,200);
+  const tY=118;
+  const cols=[{h:'Date',x:10,w:22},{h:'Day',x:32,w:13},{h:'Time\nStart',x:45,w:20},{h:'Time\nFinish',x:65,w:20},{h:'Less Meal\nBreaks',x:85,w:22},{h:'Total\nHours',x:107,w:19},{h:'NOTES (PLEASE INCLUDE ANY LEAVE\nREQUIREMENTS IN THIS SECTION)',x:126,w:74}];
+  const hH=11,rH=10,nR=7,tH=hH+(nR+1)*rH;
+  doc.setFillColor(245,218,218);doc.rect(10,tY,190,hH,'F');
+  doc.setFont(undefined,'bold');doc.setFontSize(7.2);doc.setTextColor(0);
+  cols.forEach(c=>{const ls=c.h.split('\n');if(ls.length===1)doc.text(ls[0],c.x+1,tY+7.5);else{doc.text(ls[0],c.x+1,tY+5);doc.text(ls[1],c.x+1,tY+9);}});
+  doc.setDrawColor(80);doc.setLineWidth(0.5);doc.rect(10,tY,190,tH);
+  doc.setLineWidth(0.5);doc.line(10,tY+hH,200,tY+hH);
+  doc.setFont(undefined,'normal');doc.setFontSize(8.5);doc.setTextColor(0);
+  ST.entries.forEach((e,i)=>{
+    const ry=tY+hH+i*rH;
+    if(i>=5){doc.setFillColor(250,250,248);doc.rect(10,ry,190,rH,'F');}
+    doc.setFont(undefined,'bold');doc.text(e.day,cols[1].x+1,ry+7);doc.setFont(undefined,'normal');
+    doc.text(fD(e.date),cols[0].x+1,ry+7);
+    if(e.start)doc.text(e.start,cols[2].x+1,ry+7);if(e.finish)doc.text(e.finish,cols[3].x+1,ry+7);
+    if(e.brk)doc.text(e.brk+'min',cols[4].x+1,ry+7);
+    const t=cH(e.start,e.finish,e.brk);if(t)doc.text(t,cols[5].x+1,ry+7);
+    if(e.notes){const nl=doc.splitTextToSize(e.notes,cols[6].w-2);nl.slice(0,2).forEach((l,li)=>doc.text(l,cols[6].x+1,ry+4+li*4.5));}
+    doc.setDrawColor(180);doc.setLineWidth(0.2);doc.line(10,ry+rH,200,ry+rH);
+  });
+  doc.setDrawColor(160);doc.setLineWidth(0.2);cols.slice(1).forEach(c=>doc.line(c.x,tY,c.x,tY+tH));
+  const totY=tY+hH+nR*rH;
+  doc.setFillColor(245,218,218);doc.rect(10,totY,190,rH,'F');
+  doc.setFont(undefined,'bold');doc.setFontSize(9.5);doc.setTextColor(0);
+  doc.text('Total hours for week',11,totY+7);
+  const tw=doc.getTextWidth('Total hours for week');
+  doc.setDrawColor(0);doc.setLineWidth(0.3);doc.line(11,totY+8,11+tw,totY+8);
+  doc.text(String(tot),cols[5].x+1,totY+7);
+  const cY=tY+tH+6;
+  const eC="I hereby certify that this is a correct record of the hours worked by me and that no injuries were sustained. I undertake to treat as confidential all work performed by me on this assignment. I acknowledge my responsibilities with respect to Health and Safety whilst at work and my obligation to comply with Personnel Touch Ltd's Health and Safety Policy (a copy of which I have received) and health and safety procedures introduced by Personnel Touch Ltd.";
+  const sC="It is hereby certified that the above hours are correct, the work was performed in a satisfactory manner and payment is authorised. We accept the terms and conditions which have been provided to us. We acknowledge that the Personnel Touch Ltd Employee has been given appropriate Health and Safety induction.";
+  const cW=88;
+  doc.setFont(undefined,'bold');doc.setFontSize(8);doc.setTextColor(0);doc.text("Employee's Certificate:",10,cY+4);
+  const eL=doc.splitTextToSize(eC,cW);doc.setFont(undefined,'normal');doc.setFontSize(7.5);eL.forEach((l,i)=>doc.text(l,10,cY+9.5+i*3.8));
+  const eSY=cY+9.5+eL.length*3.8+4;
+  doc.setFont(undefined,'bold');doc.setFontSize(8);doc.text('Employee Signature:',10,eSY);
+  if(ST.empSig){try{doc.addImage(ST.empSig,'PNG',10,eSY+2,52,18);}catch(e){}}
+  doc.setDrawColor(0);doc.setLineWidth(0.3);doc.line(10,eSY+22,98,eSY+22);
+  const cx=106;
+  doc.setFont(undefined,'bold');doc.setFontSize(8);doc.text("Client's Certificate:",cx,cY+4);
+  const cL=doc.splitTextToSize(sC,cW);doc.setFont(undefined,'normal');doc.setFontSize(7.5);cL.forEach((l,i)=>doc.text(l,cx,cY+9.5+i*3.8));
+  const cSY=cY+9.5+cL.length*3.8+4;
+  doc.setFont(undefined,'bold');doc.setFontSize(8);doc.text('Client Signature:',cx,cSY);
+  if(ST.supSig){try{doc.addImage(ST.supSig,'PNG',cx,cSY+2,52,18);}catch(e){}}
+  doc.setLineWidth(0.3);doc.line(cx,cSY+22,200,cSY+22);
+  doc.text('Print Name:',cx,cSY+28);
+  doc.setFont(undefined,'normal');doc.setFontSize(9.5);if(s.name)doc.text(s.name,cx+25,cSY+27);
+  doc.line(cx,cSY+34,200,cSY+34);
+  doc.setFontSize(7.5);doc.setTextColor(80);
+  if(s.position||s.company)doc.text(`${s.position||''}${s.position&&s.company?'  ·  ':''}${s.company||''}`,cx,cSY+40);
+  return doc.output('datauristring');
+}
+boot();
+</script>
+</body>
+</html>

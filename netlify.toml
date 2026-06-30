@@ -1,0 +1,8 @@
+[build]
+  functions = "netlify/functions"
+  publish = "."
+
+[[redirects]]
+  from = "/api/timesheet"
+  to = "/.netlify/functions/timesheet"
+  status = 200
