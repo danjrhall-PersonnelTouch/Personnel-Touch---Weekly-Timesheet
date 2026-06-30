@@ -90,18 +90,21 @@ const BRANCHES=[
   {label:'Personnel Touch Wellington',short:'Wellington',payroll:'timesheets.ptw@personneltouch.co.nz'},
   {label:'Personnel Touch Palmerston North',short:'Palmerston North',payroll:'timesheets.ptm@personneltouch.co.nz'},
   {label:'Personnel Touch Hawkes Bay',short:'Hawkes Bay',payroll:'timesheets.ptm@personneltouch.co.nz'},
+  {label:'Personnel Touch Management',short:'Management',payroll:'Nikki@personneltouch.co.nz'},
 ];
 const DAYS=['Mon','Tues','Wed','Thurs','Fri','Sat','Sun'];
 const LBLS=['Employee Details','Daily Hours','Sign & Submit','Handover','Supervisor Sign-Off','Complete'];
 function fmt(d){return d.toISOString().split('T')[0]}
 function fD(s,o){if(!s)return'';return new Date(s+'T00:00:00').toLocaleDateString('en-NZ',o||{day:'numeric',month:'short'});}
+function getSun(){const d=new Date();const day=d.getDay();const diff=day===0?0:7-day;d.setDate(d.getDate()+diff);return fmt(d);}
 function getMon(){const d=new Date();const day=d.getDay();const diff=day===0?-6:1-day;d.setDate(d.getDate()+diff);return fmt(d);}
-function mkW(mon){return DAYS.map((n,i)=>{const d=new Date(mon+'T00:00:00');d.setDate(d.getDate()+i);return{date:fmt(d),day:n,start:'',finish:'',brk:'',notes:'',open:i===0};});}
+function weStr(sunStr){if(!sunStr)return'';const d=new Date(sunStr+'T00:00:00');return d.toLocaleDateString('en-NZ',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'/');}
+function mkW(sun){const mon=new Date(sun+'T00:00:00');mon.setDate(mon.getDate()-6);return DAYS.map((n,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return{date:fmt(d),day:n,start:'',finish:'',brk:'',notes:'',open:i===0};});}
 function cH(s,f,b){if(!s||!f)return'';const[sh,sm]=s.split(':').map(Number);const[fh,fm]=f.split(':').map(Number);const m=(fh*60+fm)-(sh*60+sm)-(+b||0);if(m<=0)return'0';return+(m/60).toFixed(2)+'';}
 function wT(){return+ST.entries.reduce((s,e)=>{const t=cH(e.start,e.finish,e.brk);return s+(t?+t:0);},0).toFixed(2);}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function gB(){return BRANCHES.find(b=>b.label===ST.d.branch)||BRANCHES[0];}
-const ST={step:0,recordId:null,d:{name:'',position:'',branch:BRANCHES[0].label,client:'',site:'',projectNo:'',weekOf:getMon()},entries:null,supEmail:'',empSig:null,empSigEmpty:true,sup:{name:'',position:'',company:''},supSig:null,supSigEmpty:true,loading:false,loadError:null};
+const ST={step:0,recordId:null,d:{name:'',position:'',branch:BRANCHES[0].label,client:'',site:'',projectNo:'',weekOf:getSun(),supName:''},entries:null,supEmail:'',empSig:null,empSigEmpty:true,sup:{name:'',position:'',company:''},supSig:null,supSigEmpty:true,loading:false,loadError:null};
 ST.entries=mkW(ST.d.weekOf);
 
 // ---- Boot: check URL for ?id= (supervisor link) or ?download= (payroll PDF link) ----
@@ -142,11 +145,8 @@ async function handleDownloadLink(id){
     if(!rec.signed){throw new Error('not ready');}
     // Load the record into state, then regenerate the same PDF in-browser
     ST.d=rec.d;ST.entries=rec.entries;ST.empSig=rec.empSig;ST.sup=rec.sup;ST.supSig=rec.supSig;
-    const pdfDataUri=buildPDF();
-    const a=document.createElement('a');
-    a.href=pdfDataUri;
-    a.download=`PT-Timesheet-${(rec.d.name||'employee').replace(/\s+/g,'-')}-${rec.d.weekOf}.pdf`;
-    document.body.appendChild(a);a.click();a.remove();
+    const doc2=buildPDFDoc();
+    doc2.save(`PT-Timesheet-${(rec.d.name||'employee').replace(/\s+/g,'-')}-${rec.d.weekOf}.pdf`);
     ST.loading=false;ST.downloadDone=true;render();
   }catch(e){
     ST.loading=false;ST.loadError='This download link has expired or the timesheet could not be found.';render();
@@ -186,7 +186,7 @@ function render(){
   function pc(i){if(i<s){if(i<=2)return'ps ed';if(i===3)return'ps hv';return'ps sd';}if(i===s){if(i<=2)return'ps ea';if(i===3)return'ps hv';return'ps sa';}return'ps';}
   const segs=LBLS.map((_,i)=>`<div class="${pc(i)}"></div>`).join('');
   const branch=ST.d.branch||BRANCHES[0].label;
-  let html=`<div class="pt-hdr"><img src="${LOGO}" alt="Personnel Touch"><div><div class="pt-branch">${esc(branch)}</div><div class="pt-mode ${isSup?'sup':''}">${isSup?'Supervisor Sign-Off':'Weekly Timesheet'}</div></div></div>
+  let html=`<div class="pt-hdr"><img src="${LOGO}" alt="Personnel Touch"><div><div class="pt-branch">${esc(branch)}</div><div class="pt-mode ${isSup?'sup':''}">${isSup?'Supervisor Sign-Off':'Personnel Touch Weekly Timesheet'}</div></div></div>
 <div class="prog-wrap">${segs}</div>
 <div class="step-lbl">Step ${s+1} of ${LBLS.length} — ${LBLS[s]}</div>
 <div class="cnt">`;
@@ -200,15 +200,16 @@ function p0(){const d=ST.d;
   const bOpts=BRANCHES.map(b=>`<option ${d.branch===b.label?'selected':''}>${b.label}</option>`).join('');
   return`<h2>Your details</h2><p class="sub">This info appears on the timesheet. Select your PT branch to route to the right payroll team.</p>
 <div class="fd"><label class="fl">Full name *</label><input id="fn" type="text" placeholder="e.g. John Smith" value="${esc(d.name)}"/></div>
-<div class="fd"><label class="fl">Position / job title *</label><input id="fjt" type="text" placeholder="e.g. Labourer, Electrician" value="${esc(d.position)}"/></div>
+<div class="fd"><label class="fl">Position / job title *</label><input id="fjt" type="text" placeholder="e.g. Labourer, Carpenter" value="${esc(d.position)}"/></div>
 <div class="hr"></div>
 <div class="fd"><label class="fl">Personnel Touch branch *</label><select id="fbr">${bOpts}</select></div>
 <div class="hr"></div>
 <div class="fd"><label class="fl">Client / company you are working for *</label><input id="fcl" type="text" placeholder="e.g. ABC Construction Ltd" value="${esc(d.client)}"/></div>
 <div class="fd"><label class="fl">Job location / site</label><input id="fsi" type="text" placeholder="e.g. 12 Example St, Christchurch" value="${esc(d.site)}"/></div>
 <div class="fd"><label class="fl">Project number</label><input id="fpn" type="text" placeholder="e.g. PRJ-001" value="${esc(d.projectNo)}"/></div>
+<div class="fd"><label class="fl">Supervisor's name</label><input id="fsn2" type="text" placeholder="e.g. Mike Smith" value="${esc(d.supName)}"/><p style="font-size:12px;color:#888;margin-top:6px">Used to personalise the sign-off email.</p></div>
 <div class="hr"></div>
-<div class="fd"><label class="fl">Week starting (Monday) *</label><input id="fwo" type="date" value="${d.weekOf}"/></div>
+<div class="fd"><label class="fl">Week ending (Sunday) *</label><input id="fwo" type="date" value="${d.weekOf}"/></div>
 ${nav(false,true,!d.name||!d.position||!d.client)}`;}
 function p1(){
   const cards=ST.entries.map((e,i)=>{const t=cH(e.start,e.finish,e.brk);
@@ -221,7 +222,17 @@ function p1(){
 <div class="fd"><label class="fl">Less meal break (mins)</label><input type="number" value="${e.brk}" min="0" max="120" placeholder="e.g. 30" oninput="upd(${i},'brk',this.value)"/></div>
 <div class="fd"><label class="fl">Notes / leave requirements</label><textarea placeholder="e.g. Annual leave, Public holiday…" oninput="upd(${i},'notes',this.value)">${esc(e.notes)}</textarea></div>
 </div></div>`;}).join('');
-  return`<h2>Daily hours</h2><p class="sub">Tap each day to expand and fill in your hours. Leave blank for days not worked.</p>${cards}${nav(true,true,false)}`;}
+  return`<h2>Daily hours</h2><p class="sub">Tap each day to expand and fill in your hours. Leave blank for days not worked.</p>
+<div class="fd" style="margin-bottom:1rem">
+<label class="fl">Auto-fill week (Mon–Fri)</label>
+<div class="r2">
+<input id="af-start" type="time" placeholder="Start time"/>
+<input id="af-end" type="time" placeholder="Finish time"/>
+</div>
+<input id="af-brk" type="number" min="0" max="120" placeholder="Break (mins, e.g. 30)" style="margin-top:8px"/>
+<button class="btn bn" style="margin-top:8px;width:100%" onclick="autoFill()">Apply to Mon–Fri</button>
+</div>
+${cards}${nav(true,true,false)}`;}
 function p2(){const d=ST.d;const tot=wT();
   const worked=ST.entries.filter(e=>cH(e.start,e.finish,e.brk));
   const notes=ST.entries.filter(e=>e.notes);
@@ -233,7 +244,7 @@ function p2(){const d=ST.d;const tot=wT();
 ${d.site?`<div class="rv"><span class="rl">Site</span><span class="rr">${esc(d.site)}</span></div>`:''}
 ${d.projectNo?`<div class="rv"><span class="rl">Project no.</span><span class="rr">${esc(d.projectNo)}</span></div>`:''}
 <div class="rv"><span class="rl">PT Branch</span><span class="rr">${esc(d.branch)}</span></div>
-<div class="rv"><span class="rl">Week of</span><span class="rr">${fD(d.weekOf,{day:'numeric',month:'long',year:'numeric'})}</span></div></div>
+<div class="rv"><span class="rl">Week ending</span><span class="rr">${weStr(d.weekOf)}</span></div></div>
 ${worked.length?`<div class="rvc"><h3>Hours worked</h3>${worked.map(e=>`<div class="rv"><span class="rl">${e.day} ${fD(e.date)}</span><span class="rr">${e.start}–${e.finish}${e.brk?' ('+e.brk+'min)':''} = ${cH(e.start,e.finish,e.brk)}h</span></div>`).join('')}</div>`:''}
 ${notes.length?`<div class="rvc"><h3>Leave / notes</h3>${notes.map(e=>`<div class="rv"><span class="rl">${e.day}</span><span class="rr">${esc(e.notes)}</span></div>`).join('')}</div>`:''}
 <div class="ts emp"><span class="tl emp">Total hours for week</span><span class="tn emp">${tot}h</span></div>
@@ -251,7 +262,7 @@ function navSend(){
 function p3(){const d=ST.d;const branch=gB();
   return`<div style="text-align:center"><div class="hi">📧</div><div class="ht">Sent to supervisor</div>
 <p class="hs">Your signed timesheet has been emailed to <strong>${esc(ST.supEmail)}</strong> with a link to review and countersign.</p></div>
-<div class="ib"><b>What happens next:</b><br>Your supervisor opens the link on their own device, reviews your hours, adds their name/company, and countersigns. Once done, the fully signed timesheet PDF is generated and sent to <b>${esc(branch.label)}</b> payroll.</div>
+<div class="ib"><b>What happens next:</b><br>Your supervisor will receive an email with a link to review your hours, add their details, and countersign. Once they have countersigned, they will be prompted to click send — this will automatically generate a pre-filled email to the <b>${esc(branch.label)}</b> payroll team. All they need to do is hit send!</div>
 <button class="btn bn or" style="width:100%;background:transparent;color:#BF2C2C;border:1.5px solid #BF2C2C" onclick="reset()">Start a new timesheet</button>`;}
 function p4(){const d=ST.d;const tot=wT();const worked=ST.entries.filter(e=>cH(e.start,e.finish,e.brk));const s=ST.sup;
   return`<div class="sb"><b>Supervisor — your sign-off is required</b><span>Employee: ${esc(d.name)} · ${tot}h · w/c ${fD(d.weekOf)}</span></div>
@@ -288,6 +299,7 @@ function nxt(){
     ST.d.name=document.getElementById('fn').value;ST.d.position=document.getElementById('fjt').value;
     ST.d.branch=document.getElementById('fbr').value;ST.d.client=document.getElementById('fcl').value;
     ST.d.site=document.getElementById('fsi').value;ST.d.projectNo=document.getElementById('fpn').value;
+    const sn2=document.getElementById('fsn2');if(sn2)ST.d.supName=sn2.value;
     const nw=document.getElementById('fwo').value;if(nw!==ST.d.weekOf){ST.d.weekOf=nw;ST.entries=mkW(nw);}
   }
   ST.step++;render();window.scrollTo(0,0);
@@ -308,8 +320,9 @@ async function sendToSupervisor(){
     const {id}=await res.json();
     ST.recordId=id;
     const link=`${location.origin}${location.pathname}?id=${id}`;
-    const subj=encodeURIComponent(`Action required: Please sign timesheet for ${ST.d.name} — w/c ${ST.d.weekOf}`);
-    const body=encodeURIComponent(`Hi,\n\n${ST.d.name} (${ST.d.position}) has submitted their timesheet for w/c ${ST.d.weekOf} (${wT()}h) and needs your countersignature.\n\nClient: ${ST.d.client}${ST.d.site?'\nSite: '+ST.d.site:''}\n\nPlease click the link below to review and sign (if it's not clickable, copy and paste the whole line into your browser):\n\n${link}\n\nOnce signed, this will be forwarded automatically to ${ST.d.branch} payroll.\n\nThank you,\nPersonnel Touch`);
+    const subj=encodeURIComponent(`Personnel Touch — Timesheet sign-off required: ${ST.d.name} — w.e. ${weStr(ST.d.weekOf)}`);
+    const supGreeting=ST.d.supName?`Hi ${ST.d.supName},`:'Hi,';
+const body=encodeURIComponent(`${supGreeting}\n\n${ST.d.name} has submitted their timesheet for the week ending ${weStr(ST.d.weekOf)} (${wT()}h) and requires your countersignature.\n\nPlease click the link below to review and sign (if it's not clickable, copy and paste the whole line into your browser):\n\n${link}\n\nOnce you have countersigned, you will be prompted to hit send — this will automatically forward the completed timesheet to the ${ST.d.branch} payroll team. All you need to do is hit send!\n\nThank you,\nPersonnel Touch`);
     window.location.href=`mailto:${ST.supEmail}?subject=${subj}&body=${body}`;
     ST.step=3;render();window.scrollTo(0,0);
   }catch(e){
@@ -337,8 +350,8 @@ async function subSup(){
     ST.recordId=id;
     const link=`${location.origin}${location.pathname}?download=${id}`;
     const branch=gB();
-    const subj=encodeURIComponent(`Signed Timesheet — ${ST.d.name} — w/c ${ST.d.weekOf}`);
-    const body=encodeURIComponent(`Hi ${ST.d.branch} team,\n\nThe timesheet below has been signed by both the employee and supervisor.\n\nEmployee: ${ST.d.name} (${ST.d.position})\nClient: ${ST.d.client}${ST.d.site?'\nSite: '+ST.d.site:''}\nWeek of: ${ST.d.weekOf}\nTotal hours: ${wT()}h\n\nSupervisor: ${s.name}, ${s.position}, ${s.company}\n\nDownload the signed PDF here (if it's not clickable, copy and paste the whole line into your browser):\n\n${link}\n\nRegards,\n${s.name}`);
+    const subj=encodeURIComponent(`Personnel Touch — Signed Timesheet: ${ST.d.name} — w.e. ${weStr(ST.d.weekOf)}`);
+    const body=encodeURIComponent(`Hi ${ST.d.branch} team,\n\nPlease find below the completed and countersigned timesheet for your records.\n\nEmployee: ${ST.d.name}\nWeek ending: ${weStr(ST.d.weekOf)}\nTotal hours: ${wT()}h\n\nSupervisor: ${s.name}, ${s.position}, ${s.company}\n\nDownload the signed PDF here (if it's not clickable, copy and paste the whole line into your browser):\n\n${link}\n\nKind regards,\n${s.name}`);
     window.location.href=`mailto:${branch.payroll}?subject=${subj}&body=${body}`;
     ST.step=5;render();window.scrollTo(0,0);
   }catch(e){
@@ -356,12 +369,21 @@ function upd(i,k,v){
 }
 function reset(){
   ST.step=0;ST.recordId=null;
-  ST.d={name:'',position:'',branch:BRANCHES[0].label,client:'',site:'',projectNo:'',weekOf:getMon()};
+  ST.d={name:'',position:'',branch:BRANCHES[0].label,client:'',site:'',projectNo:'',weekOf:getSun(),supName:''};
   ST.entries=mkW(ST.d.weekOf);ST.supEmail='';ST.empSig=null;ST.empSigEmpty=true;
   ST.sup={name:'',position:'',company:''};ST.supSig=null;ST.supSigEmpty=true;
   Object.keys(cvsMap).forEach(k=>delete cvsMap[k]);
   history.replaceState(null,'',location.pathname);
   render();
+}
+function autoFill(){
+  const s=document.getElementById('af-start').value;
+  const f=document.getElementById('af-end').value;
+  const b=document.getElementById('af-brk').value||'';
+  if(!s||!f){alert('Please enter a start and finish time first.');return;}
+  // Apply Mon-Fri only (indices 0-4), leave notes empty
+  ST.entries.forEach((e,i)=>{if(i<5){e.start=s;e.finish=f;e.brk=b;}});
+  render();window.scrollTo(0,0);
 }
 function bind(){
   if(ST.step===0){
@@ -370,12 +392,13 @@ function bind(){
   }
 }
 function dlPDFNow(){
-  const uri=buildPDF();
-  const a=document.createElement('a');a.href=uri;
-  a.download=`PT-Timesheet-${(ST.d.name||'employee').replace(/\s+/g,'-')}-${ST.d.weekOf}.pdf`;
-  document.body.appendChild(a);a.click();a.remove();
+  const{jsPDF}=window.jspdf;
+  buildPDF();
+  // Rebuild using jsPDF .save() which handles mobile correctly
+  const doc2=buildPDFDoc();
+  doc2.save(`PT-Timesheet-${(ST.d.name||'employee').replace(/\s+/g,'-')}-${ST.d.weekOf}.pdf`);
 }
-function buildPDF(){
+function buildPDFDoc(){
   const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});
   const d=ST.d;const s=ST.sup;const tot=wT();const branch=gB();
   try{doc.addImage(LOGO,'JPEG',10,8,48,14);}catch(e){doc.setFontSize(15);doc.setFont(undefined,'bold');doc.setTextColor(191,44,44);doc.text('PERSONNEL',10,15);doc.setTextColor(28,28,28);doc.text('TOUCH',10,23);}
@@ -385,6 +408,7 @@ function buildPDF(){
   doc.setFont(undefined,'bold');doc.setFontSize(13);doc.setTextColor(28,28,28);
   doc.text(branch.label.toUpperCase(),66,15);
   doc.setFontSize(21);doc.text('WEEKLY TIMESHEET',66,26);
+  doc.setFont(undefined,'normal');doc.setFontSize(8);doc.setTextColor(80,80,80);doc.text('Week ending: '+weStr(d.weekOf),66,33);
   doc.setDrawColor(191,44,44);doc.setLineWidth(0.7);doc.line(10,52,200,52);
   doc.setFont(undefined,'bold');doc.setFontSize(10);doc.setTextColor(0);
   doc.text('Timesheets must be with our office by',105,59,{align:'center'});
@@ -446,8 +470,9 @@ function buildPDF(){
   doc.line(cx,cSY+34,200,cSY+34);
   doc.setFontSize(7.5);doc.setTextColor(80);
   if(s.position||s.company)doc.text(`${s.position||''}${s.position&&s.company?'  ·  ':''}${s.company||''}`,cx,cSY+40);
-  return doc.output('datauristring');
+  return doc;
 }
+function buildPDF(){return buildPDFDoc().output('datauristring');}
 boot();
 </script>
 </body>
