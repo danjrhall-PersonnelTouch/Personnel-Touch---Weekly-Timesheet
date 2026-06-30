@@ -186,7 +186,7 @@ function render(){
   function pc(i){if(i<s){if(i<=2)return'ps ed';if(i===3)return'ps hv';return'ps sd';}if(i===s){if(i<=2)return'ps ea';if(i===3)return'ps hv';return'ps sa';}return'ps';}
   const segs=LBLS.map((_,i)=>`<div class="${pc(i)}"></div>`).join('');
   const branch=ST.d.branch||BRANCHES[0].label;
-  let html=`<div class="pt-hdr"><img src="${LOGO}" alt="Personnel Touch"><div><div class="pt-branch">${esc(branch)}</div><div class="pt-mode ${isSup?'sup':''}">${isSup?'Supervisor Sign-Off':'Personnel Touch Weekly Timesheet'}</div></div></div>
+  let html=`<div class="pt-hdr"><img src="${LOGO}" alt="Personnel Touch"><div><div class="pt-branch">Personnel Touch</div><div class="pt-mode ${isSup?'sup':''}">${isSup?'Supervisor Sign-Off':'Weekly Timesheet'}</div></div></div>
 <div class="prog-wrap">${segs}</div>
 <div class="step-lbl">Step ${s+1} of ${LBLS.length} — ${LBLS[s]}</div>
 <div class="cnt">`;
@@ -217,19 +217,19 @@ function p1(){
 <div><div class="dn">${e.day}</div><div class="dd">${fD(e.date,{weekday:'short',day:'numeric',month:'short'})}</div></div>
 <span class="pill ${!t?'off':''}">${t?t+'h':'tap to fill'}</span></div>
 <div class="db ${e.open?'open':''}">
-<div class="r2"><div class="fd"><label class="fl">Time start</label><input type="time" value="${e.start}" oninput="upd(${i},'start',this.value)"/></div>
-<div class="fd"><label class="fl">Time finish</label><input type="time" value="${e.finish}" oninput="upd(${i},'finish',this.value)"/></div></div>
-<div class="fd"><label class="fl">Less meal break (mins)</label><input type="number" value="${e.brk}" min="0" max="120" placeholder="e.g. 30" oninput="upd(${i},'brk',this.value)"/></div>
+<div class="r2"><div class="fd"><label class="fl">Time start</label><input type="time" step="900" value="${e.start}" oninput="upd(${i},'start',this.value)"/></div>
+<div class="fd"><label class="fl">Time finish</label><input type="time" step="900" value="${e.finish}" oninput="upd(${i},'finish',this.value)"/></div></div>
+<div class="fd"><label class="fl">Meal break</label><select onchange="upd(${i},'brk',this.value)"><option value="" ${!e.brk?'selected':''}>No break</option><option value="30" ${e.brk==='30'||e.brk===30?'selected':''}>30 minutes</option><option value="60" ${e.brk==='60'||e.brk===60?'selected':''}>1 hour</option></select></div>
 <div class="fd"><label class="fl">Notes / leave requirements</label><textarea placeholder="e.g. Annual leave, Public holiday…" oninput="upd(${i},'notes',this.value)">${esc(e.notes)}</textarea></div>
 </div></div>`;}).join('');
   return`<h2>Daily hours</h2><p class="sub">Tap each day to expand and fill in your hours. Leave blank for days not worked.</p>
 <div class="fd" style="margin-bottom:1rem">
 <label class="fl">Auto-fill week (Mon–Fri)</label>
 <div class="r2">
-<input id="af-start" type="time" placeholder="Start time"/>
-<input id="af-end" type="time" placeholder="Finish time"/>
+<input id="af-start" type="time" step="900" placeholder="Start time"/>
+<input id="af-end" type="time" step="900" placeholder="Finish time"/>
 </div>
-<input id="af-brk" type="number" min="0" max="120" placeholder="Break (mins, e.g. 30)" style="margin-top:8px"/>
+<select id="af-brk" style="margin-top:8px;width:100%;padding:11px 13px;border:1px solid #ddd;border-radius:8px;font-size:16px;background:#fff;-webkit-appearance:none;appearance:none;font-family:inherit"><option value="">No break</option><option value="30">30 minutes</option><option value="60">1 hour</option></select>
 <button class="btn bn" style="margin-top:8px;width:100%" onclick="autoFill()">Apply to Mon–Fri</button>
 </div>
 ${cards}${nav(true,true,false)}`;}
@@ -262,7 +262,7 @@ function navSend(){
 function p3(){const d=ST.d;const branch=gB();
   return`<div style="text-align:center"><div class="hi">📧</div><div class="ht">Sent to supervisor</div>
 <p class="hs">Your signed timesheet has been emailed to <strong>${esc(ST.supEmail)}</strong> with a link to review and countersign.</p></div>
-<div class="ib"><b>What happens next:</b><br>Your supervisor will receive an email with a link to review your hours, add their details, and countersign. Once they have countersigned, they will be prompted to click send — this will automatically generate a pre-filled email to the <b>${esc(branch.label)}</b> payroll team. All they need to do is hit send!</div>
+<div class="ib"><b>What happens next:</b><br>Your supervisor will receive an email with a link to review your hours, add their details, and countersign. Once they have countersigned, they will be prompted to hit send — this will automatically attach the completed timesheet to an email, ready to go straight to the <b>${esc(branch.label)}</b> payroll team.</div>
 <button class="btn bn or" style="width:100%;background:transparent;color:#BF2C2C;border:1.5px solid #BF2C2C" onclick="reset()">Start a new timesheet</button>`;}
 function p4(){const d=ST.d;const tot=wT();const worked=ST.entries.filter(e=>cH(e.start,e.finish,e.brk));const s=ST.sup;
   return`<div class="sb"><b>Supervisor — your sign-off is required</b><span>Employee: ${esc(d.name)} · ${tot}h · w/c ${fD(d.weekOf)}</span></div>
@@ -322,7 +322,7 @@ async function sendToSupervisor(){
     const link=`${location.origin}${location.pathname}?id=${id}`;
     const subj=encodeURIComponent(`Personnel Touch — Timesheet sign-off required: ${ST.d.name} — w.e. ${weStr(ST.d.weekOf)}`);
     const supGreeting=ST.d.supName?`Hi ${ST.d.supName},`:'Hi,';
-const body=encodeURIComponent(`${supGreeting}\n\n${ST.d.name} has submitted their timesheet for the week ending ${weStr(ST.d.weekOf)} (${wT()}h) and requires your countersignature.\n\nPlease click the link below to review and sign (if it's not clickable, copy and paste the whole line into your browser):\n\n${link}\n\nOnce you have countersigned, you will be prompted to hit send — this will automatically forward the completed timesheet to the ${ST.d.branch} payroll team. All you need to do is hit send!\n\nThank you,\nPersonnel Touch`);
+const body=encodeURIComponent(`${supGreeting}\n\n${ST.d.name} has submitted their timesheet for the week ending ${weStr(ST.d.weekOf)} (${wT()}h) and requires your countersignature.\n\nPlease click the link below to review and sign (if it's not clickable, copy and paste the whole line into your browser):\n\n${link}\n\nOnce you have countersigned, please hit the send button which will automatically attach the completed timesheet to an email, ready to send to the payroll team.\n\nThank you,\nPersonnel Touch`);
     window.location.href=`mailto:${ST.supEmail}?subject=${subj}&body=${body}`;
     ST.step=3;render();window.scrollTo(0,0);
   }catch(e){
@@ -435,7 +435,7 @@ function buildPDFDoc(){
     doc.setFont(undefined,'bold');doc.text(e.day,cols[1].x+1,ry+7);doc.setFont(undefined,'normal');
     doc.text(fD(e.date),cols[0].x+1,ry+7);
     if(e.start)doc.text(e.start,cols[2].x+1,ry+7);if(e.finish)doc.text(e.finish,cols[3].x+1,ry+7);
-    if(e.brk)doc.text(e.brk+'min',cols[4].x+1,ry+7);
+    if(e.brk){const brkLbl=e.brk==60?'1hr':e.brk+'min';doc.text(brkLbl,cols[4].x+1,ry+7);}
     const t=cH(e.start,e.finish,e.brk);if(t)doc.text(t,cols[5].x+1,ry+7);
     if(e.notes){const nl=doc.splitTextToSize(e.notes,cols[6].w-2);nl.slice(0,2).forEach((l,li)=>doc.text(l,cols[6].x+1,ry+4+li*4.5));}
     doc.setDrawColor(180);doc.setLineWidth(0.2);doc.line(10,ry+rH,200,ry+rH);
